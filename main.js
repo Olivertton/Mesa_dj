@@ -5,7 +5,9 @@
   var refs = Panel.build(document.getElementById('screen'), document.getElementById('panel'));
   var decks = [new Deck(1), new Deck(2)];
   var colors = ['#3da9ff', '#ff4fa3'];
-  var audio = { ctx: null, master: null };
+  var audio = { ctx: null, mixer: null };
+  // Posición actual de los controles del mezclador (se aplica en cuanto arranca el audio).
+  var mixState = { trim: [0.5, 0.5], chan: [1, 1], xf: 0, master: 0.8 };
   var fileInput = document.getElementById('file');
   var targetDeck = null;
 
@@ -15,10 +17,9 @@
       var AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
       audio.ctx = new AC({ latencyHint: 'interactive' });
-      audio.master = audio.ctx.createGain();
-      audio.master.gain.value = 0.9;
-      audio.master.connect(audio.ctx.destination);
-      decks.forEach(function (d) { d.init(audio.ctx, audio.master); });
+      audio.mixer = new Mixer(audio.ctx);
+      audio.mixer.apply(mixState);
+      decks.forEach(function (d, i) { d.init(audio.ctx, audio.mixer.input(i)); });
     }
     if (audio.ctx.state !== 'running') audio.ctx.resume();
     return audio.ctx;
@@ -142,8 +143,28 @@
   // fader de tempo → deck
   refs.onTempo = function (i, v) { decks[i].setTempo(v); };
 
+  // mezclador: guardan la posición del control y, si el audio ya está en marcha, la aplican
+  refs.onTrim = function (i, v) { mixState.trim[i] = v; if (audio.mixer) audio.mixer.setTrim(i, v); };
+  refs.onChannel = function (i, v) { mixState.chan[i] = v; if (audio.mixer) audio.mixer.setChannel(i, v); };
+  refs.onCrossfader = function (x) { mixState.xf = x; if (audio.mixer) audio.mixer.setCrossfader(x); };
+  refs.onMaster = function (v) { mixState.master = v; if (audio.mixer) audio.mixer.setMaster(v); };
+
+  // asa para depurar desde la consola del navegador
+  window.MesaDJ = { audio: audio, decks: decks, mixState: mixState };
+
   // ---- bucle de dibujo ---------------------------------------------------
   var jogAngle = [null, null], ringPct = [null, null], lastStatus = 0;
+  var vuLevel = [0, 0], vuShown = [-1, -1];
+
+  // Vúmetro del canal i: sube al instante y baja despacio; solo se mide si el deck suena.
+  function updateVu(i) {
+    var pk = audio.mixer && decks[i].playing ? audio.mixer.peak(i) : 0;
+    vuLevel[i] = Math.max(pk, vuLevel[i] * 0.88);
+    var n = Mixer.curves.ledCount(vuLevel[i]);
+    if (n === vuShown[i]) return;
+    vuShown[i] = n;
+    refs.vu[i].forEach(function (led, k) { led.classList.toggle('on', 5 - k < n); }); // los LEDs van de arriba a abajo
+  }
 
   function frame(now) {
     for (var i = 0; i < 2; i++) {
@@ -161,6 +182,7 @@
         Waveform.drawScroll(s.wf, d, colors[i]);
       }
 
+      updateVu(i);
       ui.play.setOn(d.playing);
       ui.cue.setOn(d.cuePreview || (d.buffer && !d.playing && Math.abs(d.pos - d.cuePoint) < 0.02));
 

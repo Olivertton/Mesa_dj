@@ -94,7 +94,10 @@
   function channelStrip(n, refs) {
     var c = el('div', 'chan c' + n);
     var knobs = el('div', 'cknobs');
-    knobs.appendChild(UI.knob({ label: 'TRIM', min: -1, max: 1, def: 0, pending: true }).el);
+    knobs.appendChild(UI.knob({
+      label: 'TRIM', min: 0, max: 1, def: 0.5,
+      onChange: function (v) { if (refs.onTrim) refs.onTrim(n - 1, v); }
+    }).el);
     knobs.appendChild(UI.knob({ label: 'HI', min: -1, max: 1, def: 0, pending: true }).el);
     knobs.appendChild(UI.knob({ label: 'MID', min: -1, max: 1, def: 0, pending: true }).el);
     knobs.appendChild(UI.knob({ label: 'LOW', min: -1, max: 1, def: 0, pending: true }).el);
@@ -103,7 +106,10 @@
     var low = el('div', 'clow');
     low.appendChild(UI.button({ label: 'CUE', cls: 'hpcue', pending: true }).el);
     low.appendChild(el('span', 'cnum', String(n)));
-    low.appendChild(UI.fader({ orient: 'v', min: 0, max: 1, def: 1, value: 1, cls: 'chfader', pending: true }).el);
+    low.appendChild(UI.fader({
+      orient: 'v', min: 0, max: 1, def: 1, value: 1, cls: 'chfader',
+      onChange: function (v) { if (refs.onChannel) refs.onChannel(n - 1, v); }
+    }).el);
     c.appendChild(low);
     return c;
   }
@@ -133,10 +139,12 @@
 
     main.appendChild(channelStrip(1, refs));
 
-    var vu = el('div', 'vu pending');
+    var vu = el('div', 'vu');
+    refs.vu = []; // refs.vu[canal] = LEDs de arriba (rojo) a abajo
     for (var s = 0; s < 2; s++) {
-      var col = el('div', 'vucol');
-      for (var i = 0; i < 6; i++) col.appendChild(el('i', 'led'));
+      var col = el('div', 'vucol'), leds = [];
+      for (var i = 0; i < 6; i++) { var led = el('i', 'led'); leds.push(led); col.appendChild(led); }
+      refs.vu.push(leds);
       vu.appendChild(col);
     }
     main.appendChild(vu);
@@ -145,7 +153,10 @@
 
     // columna derecha: master y Beat FX
     var right = el('div', 'mcol mright');
-    right.appendChild(UI.knob({ label: 'MASTER LEVEL', min: 0, max: 1, def: 0.8, pending: true }).el);
+    right.appendChild(UI.knob({
+      label: 'MASTER LEVEL', min: 0, max: 1, def: 0.8,
+      onChange: function (v) { if (refs.onMaster) refs.onMaster(v); }
+    }).el);
     right.appendChild(UI.button({ label: 'CUE', cls: 'hpcue', pending: true }).el);
     right.appendChild(el('div', 'fxtitle', 'BEAT FX'));
     var sw = el('div', 'fxswitch pending');
@@ -167,7 +178,10 @@
 
     // crossfader
     var xf = el('div', 'm-xf');
-    xf.appendChild(UI.fader({ orient: 'h', min: -1, max: 1, def: 0, cls: 'crossfader', snap: 0.02, pending: true }).el);
+    xf.appendChild(UI.fader({
+      orient: 'h', min: -1, max: 1, def: 0, cls: 'crossfader', snap: 0.02,
+      onChange: function (v) { if (refs.onCrossfader) refs.onCrossfader(v); }
+    }).el);
     m.appendChild(xf);
 
     return m;
@@ -177,7 +191,7 @@
     var refs = { decks: [] };
     screenRoot.appendChild(screenDeck(1));
     var mid = el('div', 'smid');
-    mid.innerHTML = '<div class="brand">MESA DJ</div><div class="status">Etapa 1 · audio sin iniciar</div>' +
+    mid.innerHTML = '<div class="brand">MESA DJ</div><div class="status">Etapa 2 · audio sin iniciar</div>' +
                     '<div class="legend">Controles atenuados = próximas etapas</div>';
     screenRoot.appendChild(mid);
     screenRoot.appendChild(screenDeck(2));
