@@ -55,6 +55,8 @@
       ind.style.transform = 'rotate(' + (-135 + 270 * (v - min) / (max - min)) + 'deg)';
     }
     function set(nv, fire) {
+      // snap: fracción del recorrido alrededor del valor por defecto donde el knob "se pega" (útil para encontrar el centro al tacto)
+      if (o.snap && Math.abs(nv - def) < o.snap * (max - min)) nv = def;
       v = Math.min(max, Math.max(min, nv));
       render();
       if (fire && o.onChange) o.onChange(v);

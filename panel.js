@@ -95,13 +95,19 @@
     var c = el('div', 'chan c' + n);
     var knobs = el('div', 'cknobs');
     knobs.appendChild(UI.knob({
-      label: 'TRIM', min: 0, max: 1, def: 0.5,
+      label: 'TRIM', min: 0, max: 1, def: 0.5, snap: 0.03,
       onChange: function (v) { if (refs.onTrim) refs.onTrim(n - 1, v); }
     }).el);
-    knobs.appendChild(UI.knob({ label: 'HI', min: -1, max: 1, def: 0, pending: true }).el);
-    knobs.appendChild(UI.knob({ label: 'MID', min: -1, max: 1, def: 0, pending: true }).el);
-    knobs.appendChild(UI.knob({ label: 'LOW', min: -1, max: 1, def: 0, pending: true }).el);
-    knobs.appendChild(UI.knob({ label: 'CFX', sub: 'LOW · HI', min: -1, max: 1, def: 0, pending: true }).el);
+    [['HI', 'hi'], ['MID', 'mid'], ['LOW', 'low']].forEach(function (b) {
+      knobs.appendChild(UI.knob({
+        label: b[0], min: 0, max: 1, def: 0.5, snap: 0.03,
+        onChange: function (v) { if (refs.onEq) refs.onEq(n - 1, b[1], v); }
+      }).el);
+    });
+    knobs.appendChild(UI.knob({
+      label: 'CFX', sub: 'LOW · HI', min: -1, max: 1, def: 0, snap: 0.03,
+      onChange: function (v) { if (refs.onCfx) refs.onCfx(n - 1, v); }
+    }).el);
     c.appendChild(knobs);
     var low = el('div', 'clow');
     low.appendChild(UI.button({ label: 'CUE', cls: 'hpcue', pending: true }).el);
@@ -191,7 +197,7 @@
     var refs = { decks: [] };
     screenRoot.appendChild(screenDeck(1));
     var mid = el('div', 'smid');
-    mid.innerHTML = '<div class="brand">MESA DJ</div><div class="status">Etapa 2 · audio sin iniciar</div>' +
+    mid.innerHTML = '<div class="brand">MESA DJ</div><div class="status">Etapa 3 · audio sin iniciar</div>' +
                     '<div class="legend">Controles atenuados = próximas etapas</div>';
     screenRoot.appendChild(mid);
     screenRoot.appendChild(screenDeck(2));

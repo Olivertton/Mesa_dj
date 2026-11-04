@@ -7,7 +7,10 @@
   var colors = ['#3da9ff', '#ff4fa3'];
   var audio = { ctx: null, mixer: null };
   // Posición actual de los controles del mezclador (se aplica en cuanto arranca el audio).
-  var mixState = { trim: [0.5, 0.5], chan: [1, 1], xf: 0, master: 0.8 };
+  var mixState = {
+    trim: [0.5, 0.5], chan: [1, 1], xf: 0, master: 0.8,
+    eq: [{ low: 0.5, mid: 0.5, hi: 0.5 }, { low: 0.5, mid: 0.5, hi: 0.5 }], cfx: [0, 0]
+  };
   var fileInput = document.getElementById('file');
   var targetDeck = null;
 
@@ -145,6 +148,8 @@
 
   // mezclador: guardan la posición del control y, si el audio ya está en marcha, la aplican
   refs.onTrim = function (i, v) { mixState.trim[i] = v; if (audio.mixer) audio.mixer.setTrim(i, v); };
+  refs.onEq = function (i, band, v) { mixState.eq[i][band] = v; if (audio.mixer) audio.mixer.setEq(i, band, v); };
+  refs.onCfx = function (i, x) { mixState.cfx[i] = x; if (audio.mixer) audio.mixer.setCfx(i, x); };
   refs.onChannel = function (i, v) { mixState.chan[i] = v; if (audio.mixer) audio.mixer.setChannel(i, v); };
   refs.onCrossfader = function (x) { mixState.xf = x; if (audio.mixer) audio.mixer.setCrossfader(x); };
   refs.onMaster = function (v) { mixState.master = v; if (audio.mixer) audio.mixer.setMaster(v); };

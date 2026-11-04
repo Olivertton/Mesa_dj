@@ -1,6 +1,6 @@
 /* Mezclador: trim → fader de canal → crossfader → master → limitador → salida.
  * Las curvas son funciones puras (se prueban en Node); la clase Mixer solo conecta nodos de Web Audio.
- * En la etapa 3 el EQ y el CFX se insertan entre el trim y el fader de canal.
+ * Dentro de cada canal: trim → EQ de 3 bandas → CFX (filtro) → fader de canal.
  */
 (function (root) {
   'use strict';
@@ -19,6 +19,23 @@
   function channelGain(v) {
     v = clamp(v, 0, 1);
     return v * v;
+  }
+
+  // EQ (HI / MID / LOW): el centro es 0 dB; a la izquierda baja hasta –26 dB y a la derecha sube hasta +6 dB,
+  // igual que los rótulos del panel.
+  function eqDb(v) {
+    v = clamp(v, 0, 1);
+    return v >= 0.5 ? (v - 0.5) * 2 * 6 : (v - 0.5) * 2 * 26;
+  }
+
+  // CFX (x de –1 a +1): a la izquierda, un filtro paso-bajo que se cierra (20 kHz → 200 Hz);
+  // a la derecha, un paso-alto que se cierra (20 Hz → 8 kHz); en el centro no filtra nada.
+  function cfxFreqs(x) {
+    x = clamp(x, -1, 1);
+    return {
+      lp: x < 0 ? 20000 * Math.pow(0.01, -x) : 20000,
+      hp: x > 0 ? 20 * Math.pow(400, x) : 10
+    };
   }
 
   // Crossfader (x de –1 = deck 1 a +1 = deck 2): el centro deja pasar los dos decks al máximo.
@@ -61,11 +78,20 @@
     this.ch = [0, 1].map(function () {
       var c = {
         trim: ctx.createGain(), fader: ctx.createGain(), xf: ctx.createGain(),
-        meter: ctx.createAnalyser()
+        meter: ctx.createAnalyser(),
+        low: ctx.createBiquadFilter(), mid: ctx.createBiquadFilter(), hi: ctx.createBiquadFilter(),
+        lp: ctx.createBiquadFilter(), hp: ctx.createBiquadFilter()
       };
       c.meter.fftSize = 1024;
       c.buf = new Float32Array(c.meter.fftSize);
-      c.trim.connect(c.fader);
+      c.low.type = 'lowshelf';  c.low.frequency.value = 250;
+      c.mid.type = 'peaking';   c.mid.frequency.value = 900; c.mid.Q.value = 0.5;
+      c.hi.type = 'highshelf';  c.hi.frequency.value = 2500;
+      c.lp.type = 'lowpass';    c.lp.frequency.value = 20000; c.lp.Q.value = 3;  // Q en dB: algo de resonancia, como un filtro de DJ
+      c.hp.type = 'highpass';   c.hp.frequency.value = 10;    c.hp.Q.value = 3;
+      // trim → EQ (graves, medios, agudos) → CFX (paso-bajo, paso-alto) → fader de canal
+      c.trim.connect(c.low); c.low.connect(c.mid); c.mid.connect(c.hi);
+      c.hi.connect(c.lp); c.lp.connect(c.hp); c.hp.connect(c.fader);
       c.fader.connect(c.xf);
       c.fader.connect(c.meter);       // el vúmetro mide después del trim y del fader, antes del crossfader
       c.xf.connect(self.master);
@@ -80,6 +106,12 @@
   Mixer.prototype.input = function (i) { return this.ch[i].trim; };
   Mixer.prototype.setTrim = function (i, v) { this._set(this.ch[i].trim.gain, trimGain(v)); };
   Mixer.prototype.setChannel = function (i, v) { this._set(this.ch[i].fader.gain, channelGain(v)); };
+  Mixer.prototype.setEq = function (i, band, v) { this._set(this.ch[i][band].gain, eqDb(v)); }; // band: 'low' | 'mid' | 'hi'
+  Mixer.prototype.setCfx = function (i, x) {
+    var f = cfxFreqs(x), c = this.ch[i];
+    this._set(c.lp.frequency, f.lp);
+    this._set(c.hp.frequency, f.hp);
+  };
   Mixer.prototype.setCrossfader = function (x) {
     var g = crossfaderGains(x);
     this._set(this.ch[0].xf.gain, g[0]);
@@ -87,9 +119,13 @@
   };
   Mixer.prototype.setMaster = function (v) { this._set(this.master.gain, masterGain(v)); };
 
-  // state: { trim: [v, v], chan: [v, v], xf: x, master: v }
+  // state: { trim: [v, v], chan: [v, v], eq: [{low, mid, hi}, {…}], cfx: [x, x], xf: x, master: v }
   Mixer.prototype.apply = function (s) {
-    for (var i = 0; i < 2; i++) { this.setTrim(i, s.trim[i]); this.setChannel(i, s.chan[i]); }
+    for (var i = 0; i < 2; i++) {
+      this.setTrim(i, s.trim[i]); this.setChannel(i, s.chan[i]);
+      this.setEq(i, 'low', s.eq[i].low); this.setEq(i, 'mid', s.eq[i].mid); this.setEq(i, 'hi', s.eq[i].hi);
+      this.setCfx(i, s.cfx[i]);
+    }
     this.setCrossfader(s.xf);
     this.setMaster(s.master);
   };
@@ -102,7 +138,7 @@
     return m;
   };
 
-  Mixer.curves = { trimGain: trimGain, channelGain: channelGain, crossfaderGains: crossfaderGains, masterGain: masterGain, ledCount: ledCount };
+  Mixer.curves = { eqDb: eqDb, cfxFreqs: cfxFreqs, trimGain: trimGain, channelGain: channelGain, crossfaderGains: crossfaderGains, masterGain: masterGain, ledCount: ledCount };
   if (typeof module !== 'undefined' && module.exports) module.exports = Mixer;
   else root.Mixer = Mixer;
 })(typeof window !== 'undefined' ? window : globalThis);

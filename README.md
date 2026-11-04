@@ -1,4 +1,4 @@
-# Mesa DJ · etapa 2
+# Mesa DJ · etapa 3
 
 Simulador de mesa DJ para tablet, con la distribución de un controlador de 2 decks de iniciación. Pensado para practicar con tus propios mp3 antes de comprar el físico. Proyecto personal, sin afiliación con ninguna marca.
 
@@ -20,6 +20,9 @@ También funciona abriendo `index.html` directamente desde el almacenamiento del
 - **½ / ×2**: corrige el BPM si el detector se queda con la mitad o el doble (pasa con tempos muy rápidos, p. ej. 170 se detecta como 85).
 - **Mezclador** (etapa 2):
   - **TRIM**: el centro es 0 dB; a la izquierda baja hasta silencio y a la derecha sube hasta +9 dB. Doble toque = centro.
+  - **EQ (HI / MID / LOW)**: el centro es 0 dB; a la izquierda baja hasta –26 dB y a la derecha sube hasta +6 dB, como los rótulos del panel. Los cortes son de unos 250 Hz (graves) y 2,5 kHz (agudos), con los medios en medio. Con LOW al mínimo y HI/MID al centro practicas el *bass swap*.
+  - **CFX**: filtro por canal. A la izquierda cierra un paso-bajo (suena "apagado", hasta ~200 Hz); a la derecha cierra un paso-alto (se quedan solo los agudos, hasta ~8 kHz); en el centro no hace nada.
+  - Los knobs de TRIM, EQ y CFX tienen un **tope magnético en el centro** para encontrarlo al tacto, y el doble toque los devuelve ahí.
   - **Fader de canal**: arriba es el máximo. A mitad de recorrido son unos –12 dB.
   - **Crossfader**: izquierda = deck 1, derecha = deck 2. En el centro suenan los dos al máximo. Doble toque = centro.
   - **MASTER LEVEL**: volumen general. Hay un limitador para que la suma de dos decks no distorsione de golpe.
@@ -31,7 +34,7 @@ Los controles **atenuados** están dibujados pero se activan en etapas posterior
 ## Hoja de ruta
 1. **Hecho:** panel completo, cargar, play, cue, tempo, BPM, waveform y rejilla de pulsos.
 2. **Hecho:** deck 2, crossfader, faders de canal, trim, vúmetros, master level.
-3. EQ de 3 bandas y CFX.
+3. **Hecho:** EQ de 3 bandas y CFX.
 4. Jogs (pitch bend), Beat Sync (+ SHIFT para el rango de tempo) y loops.
 5. Pads (hot cues, beat jump, loops, sampler) y mezcla de auriculares.
 6. Beat FX y modo app instalable (funciona sin conexión).
@@ -52,5 +55,5 @@ Los controles **atenuados** están dibujados pero se activan en etapas posterior
 - Sin *key lock*: al cambiar el tempo cambia también el tono, como en un vinilo.
 - La detección de BPM es una estimación; en pistas con ritmo poco marcado puede fallar. Usa ½ / ×2.
 - El audio por Bluetooth añade retardo: usa auriculares con cable.
-- Aún no hay EQ ni CFX (etapa 3) ni escucha por auriculares: el botón CUE de cada canal y la mezcla CUE/MST se activan en la etapa 5.
+- Aún no hay escucha por auriculares: el botón CUE de cada canal y la mezcla CUE/MST se activan en la etapa 5.
 - Para depurar, en la consola del navegador existe `MesaDJ` con el estado del audio y de los decks.
