@@ -1,0 +1,193 @@
+/* Mesa DJ · etapa 1 — diseño pensado para tablet en horizontal */
+:root {
+  --bg: #08090c;
+  --plate: #14161b;
+  --plate2: #1b1e25;
+  --ctl: #262a33;
+  --ctl-hi: #343946;
+  --line: #2c303a;
+  --txt: #c9ced9;
+  --dim: #7b8294;
+  --d1: #3da9ff;
+  --d2: #ff4fa3;
+  --accent: #ff8a1f;
+  --k: clamp(24px, 5.4vh, 48px);    /* diámetro de los knobs */
+  --fs: clamp(7px, 1.3vh, 11px);    /* tamaño de las etiquetas */
+  --thumb-h: clamp(18px, 4.4vh, 34px);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; height: 100%; background: var(--bg); color: var(--txt);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden; overscroll-behavior: none;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+#app {
+  display: grid; grid-template-rows: 22fr 78fr;
+  height: 100vh; height: 100dvh; gap: 0.6vh; padding: 0.6vh 0.6vw;
+}
+#rotate-hint {
+  display: none; position: fixed; inset: 0; z-index: 10; background: var(--bg);
+  align-items: center; justify-content: center; font-size: 5vw; text-align: center; padding: 8vw;
+}
+@media (orientation: portrait) {
+  #rotate-hint { display: flex; }
+}
+
+/* ---------- pantalla (formas de onda) ---------- */
+#screen {
+  display: grid; grid-template-columns: 1.07fr 1fr 1.07fr; gap: 0.6vw; min-height: 0;
+}
+.dscreen {
+  display: grid; grid-template-rows: auto 18% minmax(0, 1fr); gap: 3px;
+  background: var(--plate); border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; min-height: 0;
+}
+/* el título va en su propia línea (se lee entero); debajo, BPM, tempo, tiempos y ½/×2 */
+.dhead {
+  display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 1px;
+  font-size: clamp(9px, 1.9vh, 15px); white-space: nowrap; min-width: 0;
+}
+.dnum {
+  display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%;
+  font-weight: 700; color: #000;
+}
+.d1 .dnum { background: var(--d1); } .d2 .dnum { background: var(--d2); }
+.dtitle { flex: 1 1 calc(100% - 1.6em - 8px); overflow: hidden; text-overflow: ellipsis; min-width: 0; color: var(--txt); }
+.dbpm { margin-left: calc(1.6em + 8px); } /* alinea la segunda línea con el título */
+.dbpm b { font-size: 1.5em; font-variant-numeric: tabular-nums; }
+.dbpm small { color: var(--dim); margin-left: 2px; font-size: .7em; }
+.dtempo, .dtime, .dremain { font-variant-numeric: tabular-nums; color: var(--dim); }
+.dtime { color: var(--txt); }
+.half, .dbl {
+  background: var(--ctl); color: var(--txt); border: 1px solid var(--line); border-radius: 5px;
+  font-size: .9em; padding: 0 .45em; height: 1.7em; touch-action: manipulation;
+}
+.half:active, .dbl:active { background: var(--ctl-hi); }
+.dscreen canvas { width: 100%; height: 100%; display: block; background: #0c0d11; border-radius: 4px; }
+.ov { touch-action: none; }
+.smid {
+  display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+  background: var(--plate); border: 1px solid var(--line); border-radius: 8px; gap: 1vh; padding: 4px;
+}
+.brand { font-weight: 800; letter-spacing: .25em; font-size: clamp(11px, 2.6vh, 22px); }
+.status, .legend { color: var(--dim); font-size: clamp(8px, 1.5vh, 12px); }
+
+/* ---------- panel ---------- */
+#panel {
+  display: grid; grid-template-columns: 1.07fr 1fr 1.07fr; gap: 0.6vw; min-height: 0;
+}
+.deck, .mixer {
+  background: var(--plate); border: 1px solid var(--line); border-radius: 12px;
+  padding: 1vh 0.8vw; min-height: 0; min-width: 0;
+}
+.pending { opacity: 0.38; pointer-events: none; }
+.na { opacity: 0.2 !important; }
+
+.sub, .klabel, .tmark, .calltxt, .cnum, .fxtitle {
+  font-size: var(--fs); color: var(--dim); text-transform: uppercase; letter-spacing: .03em; text-align: center; line-height: 1.1;
+}
+.ctl { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.ctl button { font: inherit; color: var(--txt); }
+
+/* botones */
+.b {
+  background: var(--ctl); border: 1px solid #3a3f4c; border-radius: 6px; font-size: calc(var(--fs) * 1.1); font-weight: 600;
+  min-width: 34px; min-height: 28px; padding: 0 6px; touch-action: none; cursor: pointer;
+}
+.b.down { background: var(--ctl-hi); transform: translateY(1px); }
+.b.on { background: var(--accent); color: #111; border-color: var(--accent); box-shadow: 0 0 10px rgba(255,138,31,.55); }
+.round .b { border-radius: 50%; width: clamp(28px, 5.6vh, 46px); height: clamp(28px, 5.6vh, 46px); min-width: 0; min-height: 0; padding: 0; font-size: calc(var(--fs) * 1.05); }
+.small .b { min-width: clamp(26px, 5vh, 40px); height: clamp(24px, 4.6vh, 36px); min-height: 0; padding: 0 2px; }
+.mode .b { height: clamp(20px, 3.4vh, 28px); min-height: 0; min-width: 0; padding: 0 3px; font-size: calc(var(--fs) * .95); }
+.mode.sel .b { background: #3b2b17; border-color: var(--accent); }
+.load .b { min-width: 7vw; height: clamp(26px, 5vh, 40px); border-radius: 5px; }
+.hpcue .b { min-width: clamp(40px, 7vh, 64px); height: clamp(22px, 4vh, 32px); min-height: 0; }
+
+/* ---------- deck ---------- */
+.deck { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 1vh; }
+.d-top { display: flex; align-items: flex-start; justify-content: space-between; gap: .3vw; }
+.callgrp { display: flex; align-items: flex-start; gap: 2px; position: relative; padding-top: 0; }
+.calltxt { position: absolute; top: -1px; left: 0; right: 0; pointer-events: none; font-size: calc(var(--fs) * .75); }
+.callgrp .ctl { margin-top: calc(var(--fs) * 1.2); }
+
+.jogwrap { display: flex; align-items: center; justify-content: center; min-height: 0; min-width: 0; }
+.jog {
+  --p: 0%;
+  position: relative; height: 100%; max-width: 100%; aspect-ratio: 1 / 1; border-radius: 50%;
+  background: conic-gradient(var(--c, var(--d1)) var(--p), #272a33 0);
+  padding: 4.5%;
+}
+.d1 .jog { --c: var(--d1); } .d2 .jog { --c: var(--d2); }
+.jring { position: absolute; inset: 0; border-radius: 50%; box-shadow: inset 0 0 0 2px #0006; }
+.jplat {
+  position: relative; width: 100%; height: 100%; border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, #1b1e25 0 26%, #2a2e38 27% 31%, #20232b 32% 100%);
+  display: grid; place-items: center; border: 2px solid #3a3f4c;
+}
+.jmark { position: absolute; top: 3%; left: 50%; width: 3%; height: 11%; background: #fff; transform: translateX(-50%); border-radius: 2px; }
+.jlogo { font-size: calc(var(--fs) * .9); color: var(--dim); letter-spacing: .1em; }
+.jplat .jlogo { transform: none; }
+
+.d-bottom { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0.8vw; align-items: end; }
+.transport { display: flex; flex-direction: column; align-items: center; gap: 1vh; }
+.shift .b { min-width: clamp(28px, 5vh, 40px); height: clamp(22px, 4vh, 30px); min-height: 0; }
+.big .b {
+  border-radius: 50%; width: clamp(40px, 8.4vh, 68px); height: clamp(40px, 8.4vh, 68px); min-width: 0; min-height: 0; padding: 0;
+  font-size: calc(var(--fs) * 1.2);
+}
+.padsarea { display: flex; flex-direction: column; gap: 0.8vh; min-width: 0; }
+.modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; }
+.modes .btn { width: 100%; } .modes .b { width: 100%; }
+.pads { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.pad { aspect-ratio: 1.15 / 1; border-radius: 6px; background: #0f1014; border: 1px solid #343846; min-height: 20px; }
+
+.tempocol { display: flex; flex-direction: column; align-items: center; gap: 2px; height: clamp(120px, 24vh, 220px); }
+.tempocol .fader { flex: 1 1 auto; min-height: 0; }
+
+/* ---------- faders ---------- */
+.fader { position: relative; }
+.fader.v { padding: calc(var(--thumb-h) / 2) 0; width: clamp(34px, 5.4vw, 56px); }
+.fader.v .ftrack { position: relative; height: 100%; width: 100%; touch-action: none; }
+.fader.v .ftrack::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: #07080a; border-radius: 2px; box-shadow: 0 0 0 1px #2c303a; }
+.fader.v .fthumb { position: absolute; left: 50%; width: 82%; height: var(--thumb-h); transform: translate(-50%, -50%); }
+.fader.h { padding: 0 calc(var(--thumb-h) * .6); height: clamp(30px, 6vh, 50px); width: 100%; }
+.fader.h .ftrack { position: relative; width: 100%; height: 100%; touch-action: none; }
+.fader.h .ftrack::before { content: ""; position: absolute; top: 50%; left: 0; right: 0; height: 4px; margin-top: -2px; background: #07080a; border-radius: 2px; box-shadow: 0 0 0 1px #2c303a; }
+.fader.h .fthumb { position: absolute; top: 50%; height: 82%; width: calc(var(--thumb-h) * 1.2); transform: translate(-50%, -50%); }
+.fthumb {
+  border-radius: 5px; background: linear-gradient(#444a58, #2a2e38); border: 1px solid #596073;
+  box-shadow: 0 2px 4px #0008;
+}
+.fader.v .fthumb::after { content: ""; position: absolute; left: 8%; right: 8%; top: 50%; height: 2px; background: #fff; transform: translateY(-50%); }
+.fader.h .fthumb::after { content: ""; position: absolute; top: 8%; bottom: 8%; left: 50%; width: 2px; background: #fff; transform: translateX(-50%); }
+.tempo .ftrack { cursor: pointer; }
+
+/* ---------- knobs ---------- */
+.kdial {
+  position: relative; width: var(--k); height: var(--k); border-radius: 50%; touch-action: none;
+  background: radial-gradient(circle at 35% 30%, #4a5060, #232731 70%); border: 2px solid #3d4351; box-shadow: 0 2px 4px #0009;
+}
+.kind { position: absolute; inset: 0; transform: rotate(0deg); }
+.kind::before { content: ""; position: absolute; left: 50%; top: 6%; width: 3px; height: 30%; background: #fff; transform: translateX(-50%); border-radius: 2px; }
+.browse .kdial { --k: clamp(34px, 7vh, 58px); }
+
+/* ---------- mezclador ---------- */
+.mixer { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 0.8vh; }
+.m-top { display: flex; align-items: center; justify-content: space-between; }
+.m-main { display: grid; grid-template-columns: .9fr 1fr .2fr 1fr .9fr; gap: 0.3vw; min-height: 0; }
+.mcol { display: flex; flex-direction: column; justify-content: space-between; align-items: center; min-height: 0; padding: 0.4vh 0; }
+.chan { display: flex; flex-direction: column; min-height: 0; align-items: center; gap: 0.6vh; }
+.cknobs { display: flex; flex-direction: column; justify-content: space-between; align-items: center; flex: 0 0 auto; gap: 0.4vh; width: 100%; }
+/* la parte baja (CUE, número y fader) se queda con el espacio sobrante: el fader es el que se adapta */
+.clow { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 1 1 0; min-height: 0; width: 100%; }
+.clow .hpcue, .clow .cnum { flex: 0 0 auto; }
+.chfader { flex: 1 1 0; min-height: 40px; max-height: 190px; }
+.cnum { font-size: calc(var(--fs) * 1.4); color: var(--txt); }
+.vu { display: flex; justify-content: center; gap: 3px; align-self: start; margin-top: 18%; }
+.vucol { display: flex; flex-direction: column; gap: 3px; }
+.led { width: 5px; height: clamp(8px, 2.6vh, 20px); background: #1c1f26; border-radius: 1px; }
+.fxtitle { margin-top: 2px; }
+.fxswitch { display: flex; gap: 10px; background: #0d0e12; border: 1px solid var(--line); padding: 3px 8px; border-radius: 4px; }
+.fxswitch span { font-size: var(--fs); color: var(--dim); }
+.fxrow { display: flex; gap: 4px; }
+.m-xf { padding: 0 6%; }
